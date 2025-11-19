@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  # 1. MySQL Database Service
+  data_eng_proj:
+    image: mysql:8.0
+    container_name: mysql_database
+    environment:
+      MYSQL_ROOT_PASSWORD: test1234
+      MYSQL_DATABASE: database_1
+    volumes:
+      - ./data/mysql:/var/lib/mysql 
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # 2. ETL (Python) Service - Runs your main logic
+  etl_service:
+    build: .
+    container_name: etl_pipeline
+    volumes:
+      - ./scripts:/app/scripts
+      - ./data:/app/data
+    depends_on:
+      data_eng_proj:
+        condition: service_healthy
+    environment: 
+      DB_HOST: data_eng_proj # Hostname is the service name
+      DB_USER: root
+      DB_PASSWORD: test1234  # Password must match
+      DB_NAME: database_1
+    command: python /app/scripts/ETL.py
